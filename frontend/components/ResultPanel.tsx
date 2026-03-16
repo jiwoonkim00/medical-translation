@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import type { TranslateResponse, RiskLevel, KeyFinding } from "@/lib/api";
+import type { TranslateResponse, RiskLevel } from "@/lib/api";
 
 // ─── Sub-components ────────────────────────────────────────────────────────
 
@@ -105,27 +105,6 @@ function RiskBadge({ level }: { level: RiskLevel }) {
     >
       <span className={`w-2 h-2 rounded-full ${config.dot}`} />
       위험도: {config.label}
-    </span>
-  );
-}
-
-function SeverityBadge({
-  severity,
-}: {
-  severity: KeyFinding["severity"];
-}) {
-  const map = {
-    normal: { label: "정상", className: "bg-green-100 text-green-700" },
-    mild: { label: "경미", className: "bg-blue-100 text-blue-700" },
-    moderate: { label: "중등도", className: "bg-amber-100 text-amber-700" },
-    severe: { label: "중증", className: "bg-red-100 text-red-700" },
-  };
-  const cfg = severity ? map[severity] : map.normal;
-  return (
-    <span
-      className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${cfg.className}`}
-    >
-      {cfg.label}
     </span>
   );
 }
@@ -300,32 +279,25 @@ function ExplanationTab({ result }: { result: TranslateResponse }) {
         <p className="text-sm leading-relaxed text-blue-900">{exp.summary}</p>
       </div>
 
-      {/* Key Findings as badges */}
+      {/* Key Findings as list */}
       {exp.key_findings && exp.key_findings.length > 0 && (
         <div>
           <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
             주요 소견 ({exp.key_findings.length}개)
           </h4>
-          <div className="flex flex-col gap-2">
+          <ul className="flex flex-col gap-2">
             {exp.key_findings.map((finding, idx) => (
-              <div
+              <li
                 key={idx}
                 className="flex items-start gap-3 bg-white border border-slate-200 rounded-xl p-3 shadow-sm"
               >
-                <div className="flex-shrink-0 mt-0.5">
-                  <SeverityBadge severity={finding.severity} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-800">
-                    {finding.term}
-                  </p>
-                  <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
-                    {finding.explanation}
-                  </p>
-                </div>
-              </div>
+                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold mt-0.5">
+                  {idx + 1}
+                </span>
+                <p className="text-sm text-slate-700 leading-relaxed">{finding}</p>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       )}
 
@@ -336,7 +308,7 @@ function ExplanationTab({ result }: { result: TranslateResponse }) {
         </h4>
         <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
           <p className="text-sm leading-7 text-slate-700 whitespace-pre-wrap">
-            {exp.patient_friendly_text}
+            {exp.patient_text}
           </p>
         </div>
       </div>
@@ -418,27 +390,6 @@ function ValidationTab({ result }: { result: TranslateResponse }) {
     );
   }
 
-  const issueTypeConfig = {
-    error: {
-      icon: "M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z",
-      className: "bg-red-50 border-red-200 text-red-800",
-      labelClass: "text-red-600",
-      label: "오류",
-    },
-    warning: {
-      icon: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z",
-      className: "bg-amber-50 border-amber-200 text-amber-800",
-      labelClass: "text-amber-600",
-      label: "경고",
-    },
-    info: {
-      icon: "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
-      className: "bg-blue-50 border-blue-200 text-blue-800",
-      labelClass: "text-blue-600",
-      label: "정보",
-    },
-  };
-
   return (
     <div className="flex flex-col gap-5">
       {/* Status header */}
@@ -507,76 +458,35 @@ function ValidationTab({ result }: { result: TranslateResponse }) {
         </div>
       )}
 
-      {/* Critical terms */}
-      {val.critical_terms_found && val.critical_terms_found.length > 0 && (
-        <div>
-          <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-            발견된 중요 의학 용어
-          </h4>
-          <div className="flex flex-wrap gap-2">
-            {val.critical_terms_found.map((term, idx) => (
-              <span
-                key={idx}
-                className="inline-flex items-center px-2.5 py-1 rounded-full bg-red-50 border border-red-200 text-xs font-medium text-red-700"
-              >
-                {term}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Issues list */}
       {val.issues && val.issues.length > 0 ? (
         <div>
           <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
             검증 항목 ({val.issues.length})
           </h4>
-          <div className="flex flex-col gap-2">
-            {val.issues.map((issue, idx) => {
-              const cfg = issueTypeConfig[issue.type] ?? issueTypeConfig.info;
-              return (
-                <div
-                  key={idx}
-                  className={`flex items-start gap-3 rounded-xl border p-3 ${cfg.className}`}
+          <ul className="flex flex-col gap-2">
+            {val.issues.map((issue, idx) => (
+              <li
+                key={idx}
+                className="flex items-start gap-3 rounded-xl border p-3 bg-amber-50 border-amber-200 text-amber-800"
+              >
+                <svg
+                  className="w-4 h-4 flex-shrink-0 mt-0.5 text-amber-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
                 >
-                  <svg
-                    className={`w-4 h-4 flex-shrink-0 mt-0.5 ${cfg.labelClass}`}
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d={cfg.icon}
-                    />
-                  </svg>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span
-                        className={`text-xs font-bold uppercase ${cfg.labelClass}`}
-                      >
-                        {cfg.label}
-                      </span>
-                      {issue.term && (
-                        <code className="text-xs bg-white/60 px-1.5 py-0.5 rounded font-mono">
-                          {issue.term}
-                        </code>
-                      )}
-                    </div>
-                    <p className="text-xs leading-relaxed">{issue.message}</p>
-                    {issue.suggestion && (
-                      <p className="text-xs mt-1 opacity-75">
-                        제안: {issue.suggestion}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+                <p className="text-xs leading-relaxed">{issue}</p>
+              </li>
+            ))}
+          </ul>
         </div>
       ) : (
         <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl p-4">

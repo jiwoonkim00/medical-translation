@@ -152,7 +152,7 @@ export default function TranslationForm({
           ref={textareaRef}
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="방사선 판독문을 여기에 붙여넣으세요...
+          placeholder="의료영상 판독문을 여기에 붙여넣으세요...
 
 예시:
 FINDINGS:

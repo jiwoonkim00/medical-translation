@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "판독문 번역 시스템",
-  description: "의료 방사선 판독문 한국어 번역 및 환자 설명 시스템",
+  description: "의료영상 판독문 한국어 번역 및 환자 설명 시스템",
 };
 
 export default function RootLayout({
@@ -40,7 +40,7 @@ export default function RootLayout({
                     판독문 번역 시스템
                   </h1>
                   <p className="text-blue-300 text-xs leading-tight">
-                    Medical Radiology Report Translation
+                    Medical Imaging Report Translation
                   </p>
                 </div>
               </div>

@@ -21,24 +21,17 @@ export interface KeyFinding {
 
 export interface PatientExplanation {
   summary: string;
-  key_findings: KeyFinding[];
-  patient_friendly_text: string;
+  key_findings: string[];
+  patient_text: string;
   recommendations?: string[];
   follow_up?: string;
-}
-
-export interface ValidationIssue {
-  type: "error" | "warning" | "info";
-  message: string;
-  term?: string;
-  suggestion?: string;
 }
 
 export interface ValidationResult {
   is_valid: boolean;
   risk_level: RiskLevel;
-  issues: ValidationIssue[];
-  critical_terms_found: string[];
+  issues: string[];
+  critical_terms_found?: string[];
   confidence_score?: number;
   reviewed_at?: string;
 }

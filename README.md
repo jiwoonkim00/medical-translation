@@ -1,7 +1,7 @@
 # 판독문 번역 시스템
-## Medical Radiology Report Korean Translation System
+## Medical Imaging Report Korean Translation System
 
-> 영어 방사선 판독문을 한국어로 번역하고 환자 친화적 설명을 자동 생성합니다.
+> 영어 의료영상 판독문을 한국어로 번역하고 환자 친화적 설명을 자동 생성합니다.
 > 모든 처리는 오픈소스 모델을 사용하여 온프레미스(자체 서버)에서 이루어집니다.
 
 ---

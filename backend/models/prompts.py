@@ -39,7 +39,54 @@ STRICT RULES — follow every one without exception:
    - Use standard Korean medical terminology accepted in Korean radiology practice.
    - Keep proper nouns, eponyms, and brand/device names in their original English
      form the first time, then add the Korean in parentheses if one exists.
-   - Abbreviations (CT, MRI, PET, SUV, HU, etc.) stay in English.
+   - Imaging modality abbreviations (CT, MRI, PET, SUV, HU, etc.) stay in English.
+   - Lung lobe abbreviations MUST be translated to Korean:
+     RUL → 우상엽,  LUL → 좌상엽,  RML → 우중엽,  RLL → 우하엽,  LLL → 좌하엽
+     Do NOT leave RUL/LUL/RML/RLL/LLL untranslated in the output.
+
+   MANDATORY ANATOMICAL TERM TRANSLATIONS (do NOT use lay terms):
+   - chest / thorax / thoracic → 흉부  (NOT 가슴)
+   - abdomen / abdominal → 복부  (NOT 배)
+   - pelvis / pelvic → 골반
+   - brain → 뇌  (NOT 브레인)
+   - neck / cervical → 경부 / 경추
+   - spine → 척추,  cervical spine → 경추,  thoracic spine → 흉추,  lumbar spine → 요추
+   - lung / pulmonary → 폐
+   - heart / cardiac → 심장
+   - liver / hepatic → 간
+   - kidney / renal → 신장
+   - aorta / aortic → 대동맥
+   - mediastinum / mediastinal → 종격동
+   - findings → 소견,  impression → 결론,  technique → 검사 방법
+   - clinical indication → 임상적 적응증
+   - nodule → 결절  (NOT 노듈),  mass → 종괴,  lesion → 병변
+   - pleural effusion → 흉막삼출  (NOT 삼출, NOT 흉수만 단독 사용 — 반드시 흉막삼출)
+   - pericardial effusion → 심낭삼출
+   - consolidation → 경화,  opacity → 음영
+   - focal → 국소  (NOT 중심성)
+   - focal pneumonia → 국소 폐렴  (NOT 중심성 폐렴)
+   - enlarged lymph nodes / lymphadenopathy → 비대된 림프절 / 림프절 비대  (NOT 대소두, NOT 확장된 림프절)
+   - enlarged → 비대된 / 종대된  (for lymph nodes: 림프절 비대)
+   - bilateral → 양측,  unilateral → 일측
+   - acute → 급성,  chronic → 만성,  stable → 변화 없음
+
+   IMAGING MODALITY WORD ORDER — CRITICAL:
+   - In Korean radiology, the body region always comes BEFORE the modality.
+     CORRECT: 흉부 CT, 복부 CT, 뇌 MRI, 척추 MRI, 골반 CT
+     WRONG:   CT 흉부, MRI 뇌, CT 복부
+
+   NATURAL PHRASING RULES:
+   - unremarkable / no acute findings / otherwise unremarkable → 특이 소견 없음  (NOT 이상 소견 없음)
+   - otherwise unremarkable → 그 외 특이 소견 없음
+   - small nodule / tiny nodule → 작은 결절 or 소결절  (NOT 소형 폐 결절)
+   - Do NOT insert 양측 (bilateral) when the original text says "unremarkable" or "no findings"
+     unless the original explicitly says "bilateral".
+
+   ABBREVIATION RULE — CRITICAL:
+   - When a lobe abbreviation (RUL, LUL, RML, RLL, LLL) is already present in the source,
+     translate it to Korean ONCE: RUL→우상엽, LUL→좌상엽, RML→우중엽, RLL→우하엽, LLL→좌하엽.
+     Do NOT add a redundant expansion like "우측 상부" after the translated abbreviation.
+     CORRECT: "우상엽에 작은 결절"  WRONG: "RUL 우측 상부 소형 결절"
 
 5. FORMAT
    - Preserve the original paragraph / section / heading structure.
@@ -48,38 +95,23 @@ STRICT RULES — follow every one without exception:
    - Return ONLY the translated Korean text — nothing else.
 """
 
-TRANSLATION_REFINEMENT_PROMPT = """You are a Korean radiology medical translator performing quality refinement.
+TRANSLATION_USER_PROMPT = """Translate the following English radiology report into Korean.
 
-CRITICAL INSTRUCTION: You MUST translate the ENTIRE original English report into Korean.
-Every single sentence must be translated — do NOT leave any English sentences untranslated.
-
-You are given:
-- ORIGINAL ENGLISH REPORT: the source radiology text.
-- DRAFT KOREAN TRANSLATION: an initial machine translation that may contain errors or incomplete translations.
-
-Your task is to produce a complete, refined Korean translation by:
-1. Translating ALL sentences that are still in English.
-2. Fixing any mistranslated or awkward medical terminology.
-3. Verifying that every number, measurement, and unit is preserved exactly.
-4. Verifying that negation expressions (no, without, absent, not seen, etc.) are
-   translated correctly as 없음 / 관찰되지 않음 / 확인되지 않음.
-5. Verifying that anatomical directions (right/left, superior/inferior, etc.) are correct.
-6. Ensuring natural, fluent Korean radiology report style.
-
-ORIGINAL ENGLISH REPORT:
-{original_text}
-
-DRAFT KOREAN TRANSLATION:
-{draft_translation}
-
-RAG CONTEXT (relevant medical term definitions — use these to improve accuracy):
+MEDICAL TERM REFERENCE (use these for accurate terminology):
 {rag_context}
 
-IMPORTANT:
-- Check each sentence of the original. If any sentence is not yet in Korean, translate it now.
-- Output ONLY Korean (한국어). Do NOT output Chinese characters (漢字/中文). Do NOT output Japanese.
-- Return ONLY the complete Korean translation. Every sentence must be in Korean.
-- Do not add explanations or commentary.
+ENGLISH REPORT:
+{original_text}
+
+OUTPUT RULES — follow every rule without exception:
+1. Output the complete Korean translation of the entire English report.
+2. Every sentence must be translated — nothing skipped or left in English.
+3. Preserve all numbers, measurements, and units exactly as written.
+4. Translate negations correctly: no/not/absent/not seen → 없음/관찰되지 않음/확인되지 않음.
+5. Translate directions correctly: right→우측, left→좌측, superior→상부, inferior→하부, etc.
+6. Use standard Korean radiology terminology (e.g. nodule→결절, opacity→음영, effusion→삼출).
+7. Output ONLY the Korean translation text. No commentary, no evaluation, no headers.
+8. CRITICAL: Do NOT output any Chinese characters (中文/漢字). Do NOT output Japanese. Korean (한글) ONLY.
 """
 
 # ---------------------------------------------------------------------------
@@ -162,19 +194,19 @@ KOREAN TRANSLATION:
 
 Evaluate the translation against the following criteria and return a JSON response:
 
-{
+{{
   "is_valid": true or false,
   "risk_level": "low" | "medium" | "high",
   "issues": [
-    {
+    {{
       "type": "negation_error" | "number_mismatch" | "unit_mismatch" | "direction_error" | "terminology_error" | "meaning_distortion",
       "description": "Brief English description of the problem",
       "original_fragment": "the relevant part of the original",
       "translated_fragment": "the corresponding part of the translation"
-    }
+    }}
   ],
   "overall_assessment": "Brief English summary of translation quality"
-}
+}}
 
 RISK LEVEL RULES:
 - "high"   : any negation error, any omission/change of critical findings,
@@ -197,5 +229,18 @@ OLLAMA_OPTIONS = {
     "temperature": 0.1,       # Low temperature for factual medical text
     "top_p": 0.9,
     "repeat_penalty": 1.1,
-    "num_predict": 4096,
+    "num_predict": 1024,      # Translation refinement: report text is rarely >800 tokens
+}
+
+# Patient explanation produces a JSON with 3 fields; 600 tokens is ample
+OLLAMA_OPTIONS_EXPLANATION = {
+    **OLLAMA_OPTIONS,
+    "num_predict": 600,
+}
+
+# Validation response is a compact JSON object; 400 tokens is sufficient
+OLLAMA_OPTIONS_VALIDATION = {
+    **OLLAMA_OPTIONS,
+    "temperature": 0.05,
+    "num_predict": 400,
 }

@@ -19,7 +19,7 @@ import ollama
 
 from models.prompts import (
     FALLBACK_MODEL,
-    OLLAMA_OPTIONS,
+    OLLAMA_OPTIONS_VALIDATION,
     PRIMARY_MODEL,
     VALIDATION_PROMPT,
 )
@@ -67,11 +67,27 @@ _ENGLISH_NEGATION_PATTERN = re.compile(
 )
 
 # Korean negation patterns
+# Covers both formal report style (없음, 않음) and LLM conversational endings
+# (없습니다, 없었습니다, 않습니다, 않았습니다) and particle variations
+# (이상 소견이 없 / 이상 소견은 없 / 이상이 없).
 _KOREAN_NEGATION_PATTERN = re.compile(
     r"(?:"
-    r"없음|관찰되지\s*않|확인되지\s*않|이상\s*소견\s*없|"
-    r"정상\s*범위|정상\s*소견|특이\s*소견\s*없|음성|"
-    r"보이지\s*않|발견되지\s*않"
+    # 없- family: 없음, 없습니다, 없었습니다, 없어요, 없다
+    r"없(?:음|습니다|었습니다|어(?:요)?|다\b)|"
+    # 않- family: 않음, 않습니다, 않았습니다, 않았음
+    r"않(?:음|습니다|았습니다|았음)|"
+    # 관찰/확인/보이/발견 + 되지 않 (어미 무관)
+    r"(?:관찰|확인|보이|발견)되지\s*않|"
+    # 이상 소견 + 조사 허용 + 없
+    r"이상\s*소견[이가은는]?\s*없|"
+    # 이상 + 조사 허용 + 없 (이상이 없습니다 등)
+    r"이상[이가은는]?\s*없|"
+    # 특이 소견/사항 + 조사 허용 + 없
+    r"특이\s*(?:소견|사항)[이가은는]?\s*없|"
+    # 정상 범위/소견/입니다/이었습니다
+    r"정상\s*(?:범위|소견)|정상(?:입니다|이었습니다|이다\b)|"
+    # 음성 (negative for)
+    r"음성"
     r")"
 )
 
@@ -268,7 +284,7 @@ class MedicalValidator:
                         },
                         {"role": "user", "content": prompt},
                     ],
-                    options={**OLLAMA_OPTIONS, "temperature": 0.05},
+                    options=OLLAMA_OPTIONS_VALIDATION,
                 )
                 raw_response = response["message"]["content"].strip()
                 model_used = attempt_model

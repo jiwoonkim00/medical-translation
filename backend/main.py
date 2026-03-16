@@ -88,7 +88,12 @@ async def _ensure_models_loaded() -> None:
             from models.validator import MedicalValidator    # type: ignore
             from rag.vectorstore import MedicalRAG           # type: ignore
 
-            _translator = await asyncio.to_thread(MedicalTranslator)
+            def _load_translator() -> "MedicalTranslator":
+                t = MedicalTranslator()
+                t.load_models()
+                return t
+
+            _translator = await asyncio.to_thread(_load_translator)
             logger.info("MedicalTranslator loaded.")
 
             _validator = await asyncio.to_thread(MedicalValidator)
@@ -372,34 +377,40 @@ async def translate(body: TranslateRequest) -> TranslateResponse:
     critical_findings = _extract_critical_findings(body.text + " " + translated)
 
     # ------------------------------------------------------------------ #
-    # 3. Patient explanation (with_explanation | full)                     #
+    # 3 + 4. Patient explanation and validation run concurrently          #
+    # Explanation: with_explanation | full                                #
+    # Validation:  full only                                              #
+    # The two tasks are independent — launch both and await together.     #
     # ------------------------------------------------------------------ #
-    patient_explanation: Optional[PatientExplanation] = None
-    if body.mode.value in ("with_explanation", "full"):
+
+    need_explanation = body.mode.value in ("with_explanation", "full")
+    need_validation = body.mode.value == "full"
+
+    async def _run_explanation() -> Optional[PatientExplanation]:
+        if not need_explanation:
+            return None
         try:
             exp = await asyncio.to_thread(
                 _translator.generate_patient_explanation,
                 translated_text=translated,
                 original_text=body.text,
             )
-            patient_explanation = PatientExplanation(
+            return PatientExplanation(
                 summary=exp.summary,
                 key_findings=exp.key_findings,
                 patient_text=exp.patient_explanation,
             )
         except Exception as exc:
             logger.warning("Patient explanation generation failed: %s", exc)
-            patient_explanation = PatientExplanation(
+            return PatientExplanation(
                 summary="설명을 생성하는 중 오류가 발생했습니다.",
                 key_findings=[],
                 patient_text="현재 환자용 설명을 생성할 수 없습니다. 담당 의사에게 문의하세요.",
             )
 
-    # ------------------------------------------------------------------ #
-    # 4. Validation (full mode only)                                       #
-    # ------------------------------------------------------------------ #
-    validation: Optional[ValidationResult] = None
-    if body.mode.value == "full":
+    async def _run_validation() -> Optional[ValidationResult]:
+        if not need_validation:
+            return None
         try:
             val = await asyncio.to_thread(
                 _validator.validate_translation,
@@ -410,20 +421,25 @@ async def translate(body: TranslateRequest) -> TranslateResponse:
             issue_count = len(val.issues)
             base = {"low": 0.95, "medium": 0.65, "high": 0.35}.get(risk.value, 0.5)
             confidence = round(max(0.1, base - issue_count * 0.05), 2)
-            validation = ValidationResult(
+            return ValidationResult(
                 is_valid=val.is_valid,
-                issues=[i.description if hasattr(i, 'description') else str(i) for i in val.issues],
+                issues=[i.description if hasattr(i, "description") else str(i) for i in val.issues],
                 risk_level=risk,
                 confidence_score=confidence,
             )
         except Exception as exc:
             logger.warning("Validation failed: %s", exc)
             risk = _classify_risk(body.text)
-            validation = ValidationResult(
+            return ValidationResult(
                 is_valid=True,
                 issues=["자동 검증을 완료할 수 없습니다. 휴리스틱 위험도만 제공됩니다."],
                 risk_level=risk,
             )
+
+    patient_explanation, validation = await asyncio.gather(
+        _run_explanation(),
+        _run_validation(),
+    )
 
     elapsed_ms = int((time.perf_counter() - t_start) * 1000)
 

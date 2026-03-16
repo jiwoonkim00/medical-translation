@@ -181,7 +181,7 @@ export default function HomePage() {
       {/* Page header */}
       <div className="mb-6">
         <h2 className="text-xl font-bold text-slate-800">
-          방사선 판독문 번역
+          의료영상 판독문 번역
         </h2>
         <p className="text-sm text-slate-500 mt-1">
           의료 판독문을 한국어로 번역하고 환자 설명 및 검증을 제공합니다
