@@ -60,6 +60,7 @@ class PatientExplanation:
     summary: str
     key_findings: list[str]
     patient_explanation: str
+    recommendations: list[str] = field(default_factory=list)
     raw_json: str = ""
     model_used: str = ""
     elapsed_seconds: float = 0.0
@@ -234,6 +235,28 @@ class MedicalTranslator:
         (r"크기\s*소소", "작은 크기"),
     ]
 
+    @staticmethod
+    def _pair_bilingual(original: str, translated: str) -> list[dict[str, str]]:
+        """
+        Pair English source lines with Korean translated lines for bilingual display.
+        Uses newline-based splitting — radiology reports are line-structured so
+        line counts typically match 1-to-1.
+        """
+        def split_lines(text: str) -> list[str]:
+            return [l.rstrip() for l in text.strip().split("\n")]
+
+        en_lines = split_lines(original)
+        ko_lines = split_lines(translated)
+
+        pairs: list[dict[str, str]] = []
+        max_len = max(len(en_lines), len(ko_lines))
+        for i in range(max_len):
+            en = en_lines[i] if i < len(en_lines) else ""
+            ko = ko_lines[i] if i < len(ko_lines) else ""
+            pairs.append({"en": en, "ko": ko})
+
+        return pairs
+
     @classmethod
     def _apply_corrections(cls, text: str) -> str:
         """
@@ -315,6 +338,7 @@ class MedicalTranslator:
         rag_context = self._get_rag_context(text)
         translated = ""
         model_used = self._primary_model
+        metadata: dict[str, Any] = {"rag_terms_retrieved": rag_context != "RAG context not available."}
 
         if lang == "en":
             logger.info("Direct Ollama translation (en→ko) …")
@@ -328,6 +352,7 @@ class MedicalTranslator:
             )
             translated = self._strip_chinese_contamination(translated)
             translated = self._apply_corrections(translated)
+            metadata["bilingual"] = self._pair_bilingual(text, translated)
 
         else:  # Korean input — proofreading / standardisation only
             logger.info("Input is Korean — running Ollama standardisation pass …")
@@ -359,7 +384,7 @@ class MedicalTranslator:
             source_language=lang,
             model_used=model_used,
             elapsed_seconds=round(elapsed, 2),
-            metadata={"rag_terms_retrieved": rag_context != "RAG context not available."},
+            metadata=metadata,
         )
 
     # ------------------------------------------------------------------
@@ -414,6 +439,7 @@ class MedicalTranslator:
                 summary=str(data.get("summary", "")),
                 key_findings=[str(f) for f in data.get("key_findings", [])],
                 patient_explanation=str(data.get("patient_explanation", "")),
+                recommendations=[str(r) for r in data.get("recommendations", [])],
                 raw_json=raw_response,
                 model_used=model_used,
             )

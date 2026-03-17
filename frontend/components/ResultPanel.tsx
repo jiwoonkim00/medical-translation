@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import type { TranslateResponse, RiskLevel } from "@/lib/api";
+import type { TranslateResponse, RiskLevel, BilingualLine } from "@/lib/api";
 
 // ─── Sub-components ────────────────────────────────────────────────────────
 
@@ -316,19 +316,19 @@ function ExplanationTab({ result }: { result: TranslateResponse }) {
       {/* Recommendations */}
       {exp.recommendations && exp.recommendations.length > 0 && (
         <div>
-          <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-            권고 사항
+          <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
+            권고 사항 ({exp.recommendations.length}개)
           </h4>
-          <ul className="space-y-2">
+          <ul className="flex flex-col gap-2">
             {exp.recommendations.map((rec, idx) => (
               <li
                 key={idx}
-                className="flex items-start gap-2 text-sm text-slate-700"
+                className="flex items-start gap-3 bg-white border border-slate-200 rounded-xl p-3 shadow-sm"
               >
                 <span className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold mt-0.5">
                   {idx + 1}
                 </span>
-                {rec}
+                <p className="text-sm text-slate-700 leading-relaxed">{rec}</p>
               </li>
             ))}
           </ul>
@@ -357,6 +357,46 @@ function ExplanationTab({ result }: { result: TranslateResponse }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function BilingualTab({ result }: { result: TranslateResponse }) {
+  const pairs = result.bilingual;
+
+  if (!pairs || pairs.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+          <svg className="w-7 h-7 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+          </svg>
+        </div>
+        <p className="text-sm text-slate-500">영어 입력 시 영-한 대조 표시가 제공됩니다</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="grid grid-cols-2 gap-2 mb-2">
+        <div className="text-xs font-bold text-slate-400 uppercase tracking-wider px-3">영어 원문</div>
+        <div className="text-xs font-bold text-slate-400 uppercase tracking-wider px-3">한국어 번역</div>
+      </div>
+      {pairs.map((pair: BilingualLine, idx: number) => {
+        const isEmpty = !pair.en.trim() && !pair.ko.trim();
+        if (isEmpty) return <div key={idx} className="h-3" />;
+        return (
+          <div key={idx} className="grid grid-cols-2 gap-2 rounded-lg hover:bg-slate-50 transition-colors">
+            <div className="px-3 py-2 text-sm text-slate-600 leading-relaxed border-r border-slate-100">
+              {pair.en || <span className="text-slate-300 italic">—</span>}
+            </div>
+            <div className="px-3 py-2 text-sm text-slate-800 leading-relaxed font-medium">
+              {pair.ko || <span className="text-slate-300 italic">—</span>}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -514,7 +554,7 @@ function ValidationTab({ result }: { result: TranslateResponse }) {
 
 // ─── Main ResultPanel ──────────────────────────────────────────────────────
 
-type TabKey = "translation" | "explanation" | "validation";
+type TabKey = "translation" | "bilingual" | "explanation" | "validation";
 
 interface ResultPanelProps {
   result: TranslateResponse | null;
@@ -525,6 +565,11 @@ const TABS: { key: TabKey; label: string; icon: string }[] = [
   {
     key: "translation",
     label: "번역문",
+    icon: "M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129",
+  },
+  {
+    key: "bilingual",
+    label: "영-한 대조",
     icon: "M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129",
   },
   {
@@ -590,6 +635,9 @@ export default function ResultPanel({ result, isLoading }: ResultPanelProps) {
           <>
             {activeTab === "translation" && (
               <TranslationTab result={result} />
+            )}
+            {activeTab === "bilingual" && (
+              <BilingualTab result={result} />
             )}
             {activeTab === "explanation" && (
               <ExplanationTab result={result} />

@@ -56,6 +56,13 @@ class RiskLevel(str, Enum):
 # ---------------------------------------------------------------------------
 
 
+class BilingualLine(BaseModel):
+    """A single line pairing of English and Korean text."""
+
+    en: str = Field(..., description="Original English line.")
+    ko: str = Field(..., description="Korean translation of the line.")
+
+
 class PatientExplanation(BaseModel):
     """Lay-language explanation of the radiology report for patients."""
 
@@ -73,6 +80,10 @@ class PatientExplanation(BaseModel):
             "Full patient-friendly explanation written in Korean, "
             "avoiding medical jargon."
         ),
+    )
+    recommendations: List[str] = Field(
+        default_factory=list,
+        description="Clinical follow-up recommendations (e.g. follow-up imaging schedule).",
     )
 
 
@@ -149,6 +160,10 @@ class TranslateResponse(BaseModel):
     validation: Optional[ValidationResult] = Field(
         default=None,
         description="Translation validation result (present for 'full' mode only).",
+    )
+    bilingual: Optional[List[BilingualLine]] = Field(
+        default=None,
+        description="Line-by-line English–Korean bilingual pairs (present for English input).",
     )
     critical_findings: List[str] = Field(
         default_factory=list,

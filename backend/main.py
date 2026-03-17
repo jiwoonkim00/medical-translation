@@ -31,6 +31,7 @@ from fastapi.responses import JSONResponse
 
 import config
 from schemas import (
+    BilingualLine,
     ErrorResponse,
     HealthResponse,
     MedicalTerm,
@@ -364,6 +365,11 @@ async def translate(body: TranslateRequest) -> TranslateResponse:
             source_lang=body.source_lang.value,
         )
         translated: str = translation_result.translated_text
+        bilingual_pairs = translation_result.metadata.get("bilingual")
+        bilingual: Optional[list[BilingualLine]] = (
+            [BilingualLine(en=p["en"], ko=p["ko"]) for p in bilingual_pairs]
+            if bilingual_pairs else None
+        )
     except Exception as exc:
         logger.exception("Translation failed.")
         raise HTTPException(
@@ -399,6 +405,7 @@ async def translate(body: TranslateRequest) -> TranslateResponse:
                 summary=exp.summary,
                 key_findings=exp.key_findings,
                 patient_text=exp.patient_explanation,
+                recommendations=exp.recommendations,
             )
         except Exception as exc:
             logger.warning("Patient explanation generation failed: %s", exc)
@@ -448,6 +455,7 @@ async def translate(body: TranslateRequest) -> TranslateResponse:
         translated=translated,
         patient_explanation=patient_explanation,
         validation=validation,
+        bilingual=bilingual,
         critical_findings=critical_findings,
         processing_time_ms=elapsed_ms,
     )

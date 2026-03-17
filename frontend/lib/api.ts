@@ -1,5 +1,10 @@
 // ─── TypeScript Interfaces ─────────────────────────────────────────────────
 
+export interface BilingualLine {
+  en: string;
+  ko: string;
+}
+
 export type LanguageCode = "auto" | "en" | "ko";
 export type TranslationMode = "translation_only" | "with_explanation" | "full";
 export type RiskLevel = "low" | "medium" | "high" | "critical";
@@ -48,6 +53,7 @@ export interface TranslateResponse {
   processing_time_ms: number;
   model_used?: string;
   timestamp?: string;
+  bilingual?: BilingualLine[] | null;
 }
 
 export interface MedicalTerm {
@@ -121,6 +127,7 @@ interface RawTranslateResponse {
   processing_time_ms?: number;
   model_used?: string;
   timestamp?: string;
+  bilingual?: BilingualLine[] | null;
 }
 
 /**
@@ -145,6 +152,7 @@ export async function translateReport(
     translated_text: raw.translated_text ?? raw.translated ?? "",
     critical_findings: raw.critical_findings ?? [],
     processing_time_ms: raw.processing_time_ms ?? 0,
+    bilingual: raw.bilingual ?? null,
   } as TranslateResponse;
 }
 
